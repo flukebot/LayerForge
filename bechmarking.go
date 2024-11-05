@@ -7,23 +7,20 @@ import (
 	"time"
 )
 
+
+
 // RunBenchmark initializes and runs the floating-point operation benchmarks within the Blueprint framework.
 func (bp *Blueprint) RunBenchmark(duration time.Duration) (string, string, string, string, string, string, string, string) {
-	bp.Duration = duration
-
-	// Single-threaded benchmarks
-	ops32Single := bp.runSingleThreadedBenchmark(true) / int(duration.Seconds())
-	ops64Single := bp.runSingleThreadedBenchmark(false) / int(duration.Seconds())
+	ops32Single := bp.runSingleThreadedBenchmark(true, duration) / int(duration.Seconds())
+	ops64Single := bp.runSingleThreadedBenchmark(false, duration) / int(duration.Seconds())
 	formattedOps32Single := bp.FormatNumber(ops32Single)
 	formattedOps64Single := bp.FormatNumber(ops64Single)
 
-	// Multi-threaded benchmarks
-	ops32Multi := bp.runMultiThreadedBenchmark(true) / int(duration.Seconds())
-	ops64Multi := bp.runMultiThreadedBenchmark(false) / int(duration.Seconds())
+	ops32Multi := bp.runMultiThreadedBenchmark(true, duration) / int(duration.Seconds())
+	ops64Multi := bp.runMultiThreadedBenchmark(false, duration) / int(duration.Seconds())
 	formattedOps32Multi := bp.FormatNumber(ops32Multi)
 	formattedOps64Multi := bp.FormatNumber(ops64Multi)
 
-	// Estimation of max layers and nodes per layer
 	maxLayers32Single, maxLayers64Single := bp.EstimateMaxLayersAndNodes(ops32Single, ops64Single)
 	maxLayers32Multi, maxLayers64Multi := bp.EstimateMaxLayersAndNodes(ops32Multi, ops64Multi)
 
@@ -31,10 +28,10 @@ func (bp *Blueprint) RunBenchmark(duration time.Duration) (string, string, strin
 }
 
 // runSingleThreadedBenchmark performs a single-threaded benchmark on float32 or float64 operations.
-func (bp *Blueprint) runSingleThreadedBenchmark(isFloat32 bool) int {
+func (bp *Blueprint) runSingleThreadedBenchmark(isFloat32 bool, duration time.Duration) int {
 	startTime := time.Now()
 	ops := 0
-	for time.Since(startTime) < bp.Duration {
+	for time.Since(startTime) < duration {
 		if isFloat32 {
 			ops += bp.PerformFloat32Ops(1000)
 		} else {
@@ -45,7 +42,7 @@ func (bp *Blueprint) runSingleThreadedBenchmark(isFloat32 bool) int {
 }
 
 // runMultiThreadedBenchmark performs a multi-threaded benchmark on float32 or float64 operations.
-func (bp *Blueprint) runMultiThreadedBenchmark(isFloat32 bool) int {
+func (bp *Blueprint) runMultiThreadedBenchmark(isFloat32 bool, duration time.Duration) int {
 	numCores := runtime.NumCPU()
 	var wg sync.WaitGroup
 	opsChan := make(chan int, numCores)
@@ -53,9 +50,9 @@ func (bp *Blueprint) runMultiThreadedBenchmark(isFloat32 bool) int {
 	for i := 0; i < numCores; i++ {
 		wg.Add(1)
 		if isFloat32 {
-			go bp.workerBenchmark(bp.PerformFloat32Ops, opsChan, &wg)
+			go bp.workerBenchmark(bp.PerformFloat32Ops, opsChan, &wg, duration)
 		} else {
-			go bp.workerBenchmark(bp.PerformFloat64Ops, opsChan, &wg)
+			go bp.workerBenchmark(bp.PerformFloat64Ops, opsChan, &wg, duration)
 		}
 	}
 	wg.Wait()
@@ -69,11 +66,11 @@ func (bp *Blueprint) runMultiThreadedBenchmark(isFloat32 bool) int {
 }
 
 // workerBenchmark performs operations for the multi-threaded benchmark.
-func (bp *Blueprint) workerBenchmark(opFunc func(int) int, opsChan chan int, wg *sync.WaitGroup) {
+func (bp *Blueprint) workerBenchmark(opFunc func(int) int, opsChan chan int, wg *sync.WaitGroup, duration time.Duration) {
 	defer wg.Done()
 	startTime := time.Now()
 	ops := 0
-	for time.Since(startTime) < bp.Duration {
+	for time.Since(startTime) < duration {
 		ops += opFunc(1000)
 	}
 	opsChan <- ops
@@ -106,7 +103,6 @@ func (bp *Blueprint) PerformFloat64Ops(count int) int {
 // EstimateMaxLayersAndNodes estimates the maximum number of layers and nodes for a neural network based on operation count.
 func (bp *Blueprint) EstimateMaxLayersAndNodes(ops32, ops64 int) (string, string) {
 	const nodesPerLayer = 1000
-
 	maxLayers32 := ops32 / (nodesPerLayer * nodesPerLayer)
 	maxLayers64 := ops64 / (nodesPerLayer * nodesPerLayer)
 
