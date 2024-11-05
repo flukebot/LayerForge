@@ -68,6 +68,10 @@ type ModelMetadata struct {
 	Evaluated      bool     `json:"evaluated"`
 	ParentModelIDs []string `json:"parentModelIDs"`
 	ChildModelIDs  []string `json:"childModelIDs"`
+
+	// New fields for neuron and layer counts using int64 for large values
+	TotalNeurons int64 `json:"totalNeurons"`
+	TotalLayers  int64 `json:"totalLayers"`
 }
 
 // NetworkConfig represents the structure of the neural network, containing input, hidden, and output layers, and model metadata.
