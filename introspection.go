@@ -20,7 +20,7 @@ type ParameterInfo struct {
 
 // GetBlueprintMethods returns a JSON string containing all methods attached to the Blueprint struct,
 // including each method's parameters and their types.
-func (bp *Blueprint) GetBlueprintMethods() (string, error) {
+func (bp *Blueprint) GetBlueprintMethodsJSON() (string, error) {
 	var methods []MethodInfo
 
 	// Use reflection to inspect the Blueprint's methods
@@ -54,4 +54,28 @@ func (bp *Blueprint) GetBlueprintMethods() (string, error) {
 	}
 
 	return string(data), nil
+}
+
+// Correct implementation of GetBlueprintMethods
+func (bp *Blueprint) GetBlueprintMethods() ([]MethodInfo, error) {
+    var methods []MethodInfo
+    bpType := reflect.TypeOf(bp)
+    for i := 0; i < bpType.NumMethod(); i++ {
+        method := bpType.Method(i)
+        var params []ParameterInfo
+        methodType := method.Type
+        for j := 1; j < methodType.NumIn(); j++ {
+            paramType := methodType.In(j)
+            param := ParameterInfo{
+                Name: fmt.Sprintf("param%d", j),
+                Type: paramType.String(),
+            }
+            params = append(params, param)
+        }
+        methods = append(methods, MethodInfo{
+            MethodName: method.Name,
+            Parameters: params,
+        })
+    }
+    return methods, nil
 }
